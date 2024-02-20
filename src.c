@@ -1,5 +1,19 @@
+// TIC TAC TOE Negamax AI
+// By typedecker
+
+// Description:
+// A practice project to get used to C's advanced syntactic sugar. A negamax tic tac toe AI.
+
+// Notes:
+// I might make a few more versions of this with minor/major code optimizations and fixes in the hopes of learning more from it!
+
+// ---------------------------------------------------------------------------------------------------------------------------
+
+// Header file imports ----
 #include <stdio.h>
 #include <string.h>
+
+// ----
 
 // ------------------ BASIC STUFF STARTS HERE ------------------------------------------
 
@@ -200,63 +214,72 @@ float evaluate(Board board, int turn) {
         return -0.5;
     }
 
-    return ((float)turn * outcome); // return 1 or -1 for win or loss, it multiplies it with the turn int to adjust for -1 being the outcome for O's win.
+    return ((float)turn * outcome * 99.9); // return 1 or -1 for win or loss, it multiplies it with the turn int to adjust for -1 being the outcome for O's win.
 }
 
 float negamax(Board board, int turn, int depth) {
-    if (depth == 0) {
+    // Negamax function that can search a certain number of moves deep to score a position accordingly.
+
+    if (depth == 0 || getOutcome(board) != 0.0) {
+        // If depth is zero or the game outcome has already been decided then directly return the evaluation.
         return evaluate(board, turn);
     }
 
-    generateMoves(&board);
+    generateMoves(&board); // Generate the moves array for the board internally.
 
-    int k = 0;
-    float maxScore = -999.9, currScore = -999.9;
-    Board pseudoBoard;
+    int k = 0; // Move index.
+    float maxScore = 0.0, currScore = 0.0; // Score trackers.
+    Board pseudoBoard; // Pseudo Board for making moves.
+    initBoard(&pseudoBoard); // Initialize the pseudo board with default values.
     while (board.moves[k] != -1 && k < 9) {
-        setBoard(&pseudoBoard, board.boxes);
-        playMove(&pseudoBoard, board.moves[k]);
+        // Loop till we hit a "No Move" or hit the max move count.
+        setBoard(&pseudoBoard, board.boxes); // Set the pseudo board to the board's position.
+        pseudoBoard.turn = board.turn; // Set the turn of the pseudo board to the board's turn.
+        playMove(&pseudoBoard, board.moves[k]); // Play the move being checked on the pseudo board.
 
-        currScore = -negamax(pseudoBoard, -board.turn, (depth - 1));
+        currScore = -negamax(pseudoBoard, -turn, (depth - 1)); // Fetch the score for this newly obtained position.
         if (currScore > maxScore) {
+            // If the score for this move's after position is higher than the current max, then set it as max.
             maxScore = currScore;
         }
-
-        k++;
+        k++; // Increment the move index.
     }
 
-    return maxScore;
+    return maxScore; // Return the maximum score value from the search.
 }
 
 int predictMove(Board board, int turn, int depth) {
-    float outcome = getOutcome(board);
+    // Predicts the best move to play for a given position.
+
+    float outcome = getOutcome(board); // Fetch the outcome of the game.
     if (outcome != 0.0 || board.turn != turn) {
+        // If the game has already ended, no moves can be played.
         return -1; // Return -1 as a No move, if no moves are possible due to a draw, loss or win.
     }
     
-    generateMoves(&board);
+    generateMoves(&board); // Generates the internal moves list for the board object.
 
-    printMoves(board.moves);
-
-    int k = 0, bestMove = board.moves[k];
-    float bestScore = -999.9, currScore = -999.9;
-    Board pseudoBoard;
-    initBoard(&pseudoBoard);
+    int k = 0, bestMove = board.moves[k]; // Move index and the default Best Move is the first one in the list.
+    float bestScore = -999.9, currScore = -999.9; // We take the best and current scores to be highly negative to incentivize choosing a higher score.
+    Board pseudoBoard; // Pseudo Board for making moves,
+    initBoard(&pseudoBoard); // Initialize the pseudo board with default values.
     while (board.moves[k] != -1 && k < 9) {
-        setBoard(&pseudoBoard, board.boxes);
-        playMove(&pseudoBoard, board.moves[k]);
+        // Loop till we hit a "No Move" or hit the max move count.
+        setBoard(&pseudoBoard, board.boxes); // Set the pseudo board to the board's position.
+        pseudoBoard.turn = board.turn; // Set the turn of the pseudo board to the board's turn.
+        playMove(&pseudoBoard, board.moves[k]); // Play the move being checked on the pseudo board.
 
-        currScore = -negamax(pseudoBoard, -turn, depth);
+        currScore = -negamax(pseudoBoard, -turn, depth); // Fetch the score for this newly obtained position.
         if (currScore > bestScore) {
+            // If the score for this move's after position is higher than the current max, then set it as max
+            // Also set the current best move as this move.
             bestMove = board.moves[k];
             bestScore = currScore;
         }
-        displayBoard(pseudoBoard);
-        printf("%d %f %f %d %d %d\n", board.moves[k], currScore, bestScore, bestMove, pseudoBoard.turn, board.turn);
-        k++;
+        k++; // Increment the move index
     }
 
-    return bestMove;
+    return bestMove; // Return the best move.
 }
 
 // ------------------- AI STUFF ENDS HERE --------------------------------------------
@@ -264,11 +287,15 @@ int predictMove(Board board, int turn, int depth) {
 // ------------------- USER INTERFACE STUFF STARTS HERE ------------------------------
 
 void playGame(int depth) {
+    // Provides a user interface over the console for a player vs AI experience.
+
+    // Initialize default stuff ---
     Board board;
     int playerTurn = 1, playerMove, aiMove;
 
     // ----
 
+    // Turn Selection for the player ----
     char turnSymbol, aiTurnSymbol;
     printf("Choose a turn:\n1. X\n2. O\n\n");
     scanf("%c", &turnSymbol);
@@ -288,6 +315,7 @@ void playGame(int depth) {
 
     // ----
 
+    // If the player is first, then this allows the player to play a move.
     initBoard(&board);
     if (playerTurn == 1) {
         displayBoard(board);
@@ -302,17 +330,26 @@ void playGame(int depth) {
         displayBoard(board);
     }
 
-
+    // While the game is still ongoing...
     while (getOutcome(board) == 0.0) {
-        generateMoves(&board);
+        // AI Move play ----
+        generateMoves(&board); // Generate the internal moves array for the board.
 
-        displayBoard(board);
+        displayBoard(board)
         aiMove = predictMove(board, -playerTurn, depth);
         playMove(&board, aiMove);
         printf("The AI has played the move %d!\n", aiMove);
         displayBoard(board);
 
+        // Checking for game end ----
+
+        if (getOutcome(board) != 0.0) {
+            break;
+        }
+
         // ----
+
+        // Player Move play ----
         generateMoves(&board);
 
         displayBoard(board);
@@ -324,9 +361,12 @@ void playGame(int depth) {
         playMove(&board, playerMove);
         printf("Player has played the move %d!\n", playerMove);
         displayBoard(board);
+
+        // ----
         continue;
     }
 
+    // Fetch the outcome of the match and print it accordingly.
     float outcome = getOutcome(board);
     if (outcome == 0.5) {
         printf("The game was drawn.");
@@ -337,35 +377,18 @@ void playGame(int depth) {
     else {
         printf("The game was won by the AI!!");
     }
+    
+    return;
 }
 
 // ------------------- USER INTERFACE STUFF ENDS HERE --------------------------------
 
 // Main function ---------------------------------------------------------------------
 int main() {
-    Board b; // declaring an instance b of Board.
+    // Main function, this is where the control flow starts from.
 
-    initBoard(&b);
-    displayBoard(b); // this displays the board ofc :)
-
-    // // int dummyArray[9] = {-1, 1, 1, 1, -1, -1, 1, -1, 1}; // initializes a dummy array with box values.
-    // // setBoard(&b, dummyArray);
-    // displayBoard(b);
-
-    // printf("%f \n", getOutcome(b));
-    // printf("%f \n", evaluate(b, 1));
-
-    // generateMoves(&b);
-    // printMoves(b.moves);
-
-    // printf("NEGAMAX-SCORE: %f \n", negamax(b, -1, 10));
-    // printf("PREDICTED-MOVE %d\n", predictMove(b, 10));
-
-    // printf("\n\n\n");
-    // getchar();
-
-    playGame(10);
-    getchar();
-    return 0;
+    playGame(20); // Play a game with a depth of 20.
+    getchar(); // For cases where the console might suddenly close.
+    return 0; // Return 0 to signify no error.
 }
 // -------------------------------------------------------------------------------------
